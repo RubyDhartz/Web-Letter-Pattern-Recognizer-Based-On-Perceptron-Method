@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pengenalan Huruf Perceptron</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .grid-cell {
+            width: 40px;
+            height: 40px;
+            border: 1px solid #ccc;
+            cursor: pointer;
+        }
+        .grid-cell.active {
+            background-color: black;
+        }
+        .prediction-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 40px);
+            gap: 2px;
+        }
+        .prediction-cell {
+            width: 40px;
+            height: 40px;
+            border: 1px solid #ddd;
+        }
+        .prediction-cell.filled {
+            background-color: black;
+        }
+        
+        .delete-pattern-btn {
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+        .trained-pattern-container:hover .delete-pattern-btn {
+            opacity: 1;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 p-8">
+    <div class="container mx-auto max-w-6xl bg-white p-6 rounded-lg shadow-lg">
+        <h1 class="text-3xl font-bold mb-6 text-center">Pengenalan Huruf dengan Perceptron</h1>
+
+        <div class="grid grid-cols-2 gap-8">
+            <!-- Input Grid Section -->
+            <div>
+                <h2 class="text-xl font-semibold mb-4">Grid Input Pola Huruf (5x5)</h2>
+                <div id="patternGrid" class="grid grid-cols-5 gap-1 mx-auto w-fit mb-4">
+                    <!-- 5x5 grid cells will be generated dynamically -->
+                </div>
+                <div class="flex items-center space-x-4 mb-4">
+                    <div>
+                        <label for="letterInput" class="block mb-2">Huruf:</label>
+                        <input type="text" id="letterInput" maxlength="1" 
+                            class="w-20 px-2 py-1 border rounded">
+                    </div>
+                    <div>
+                        <button onclick="addPattern()" 
+                            class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
+                            Tambah Pola
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Prediction Visualization Section -->
+            <div>
+                <h2 class="text-xl font-semibold mb-4">Visualisasi Prediksi</h2>
+                <div class="bg-gray-50 p-4 rounded">
+                    <div class="mb-4">
+                        <h3 class="font-semibold">Input Pola:</h3>
+                        <div id="inputPatternVisualization" class="prediction-grid">
+                            <!-- Input pattern will be visualized here -->
+                        </div>
+                    </div>
+                    <div class="mb-4">
+                        <h3 class="font-semibold">Pola Terlatih:</h3>
+                        <div id="trainedPatternVisualization" class="space-y-2">
+                            <!-- Trained patterns will be visualized here -->
+                        </div>
+                    </div>
+                    <div>
+                        <h3 class="font-semibold">Hasil Prediksi:</h3>
+                        <div id="predictionResult" class="text-xl font-bold"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Action Buttons and Model Controls -->
+        <div class="flex space-x-4 mt-6 justify-center">
+            <button onclick="trainModel()" 
+                class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600">
+                Latih Model
+            </button>
+            <button onclick="predict()" 
+                class="bg-purple-500 text-white px-4 py-2 rounded hover:bg-purple-600">
+                Prediksi Huruf
+            </button>
+            <button onclick="resetGrid()" 
+                class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600">
+                Reset Grid
+            </button>
+        </div>
+        <div class="flex space-x-4 mt-6 justify-center">
+            <button onclick="trainModel()" 
+                class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600">
+                Latih Model
+            </button>
+            <button onclick="predict()" 
+                class="bg-purple-500 text-white px-4 py-2 rounded hover:bg-purple-600">
+                Prediksi Huruf
+            </button>
+            <button onclick="resetGrid()" 
+                class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600">
+                Reset Grid
+            </button>
+            <button onclick="clearDatabaseConfirmation()" 
+                class="bg-red-700 text-white px-4 py-2 rounded hover:bg-red-800">
+                Hapus Semua Data
+            </button>
+        </div>
+
+        <!-- Training Log and Database -->
+        <div class="grid grid-cols-2 gap-4 mt-6">
+            <div class="bg-gray-50 p-4 rounded">
+                <h3 class="font-semibold mb-2">Log Pelatihan</h3>
+                <pre id="trainingLog" class="text-sm overflow-auto max-h-60"></pre>
+            </div>
+            <div class="bg-gray-50 p-4 rounded">
+                <h3 class="font-semibold mb-2">Database Pola Huruf</h3>
+                <pre id="letterDatabase" class="text-sm overflow-auto max-h-60"></pre>
+            </div>
+        </div>
+    </div>
+
+        <!-- Modal Konfirmasi -->
+        <div id="confirmationModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+            <div class="bg-white p-6 rounded-lg shadow-xl">
+                <h2 class="text-xl font-bold mb-4">Konfirmasi Penghapusan</h2>
+                <p class="mb-4">Apakah Anda yakin ingin menghapus semua data?</p>
+            <div class="flex justify-end space-x-4">
+                <button onclick="closeConfirmationModal()" 
+                    class="bg-gray-300 text-black px-4 py-2 rounded">
+                    Batal
+                </button>
+                <button onclick="clearDatabase()" 
+                    class="bg-red-600 text-white px-4 py-2 rounded">
+                    Hapus
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Create 5x5 grid
+        const grid = document.getElementById('patternGrid');
+        const inputPatternViz = document.getElementById('inputPatternVisualization');
+        const trainedPatternViz = document.getElementById('trainedPatternVisualization');
+
+        // Initialize grids
+        function initializeGrids() {
+            grid.innerHTML = '';
+            inputPatternViz.innerHTML = '';
+
+            for (let i = 0; i < 25; i++) {
+                // Main input grid
+                const cell = document.createElement('div');
+                cell.classList.add('grid-cell');
+                cell.dataset.index = i;
+                cell.addEventListener('click', () => {
+                    cell.classList.toggle('active');
+                    updateInputPatternVisualization();
+                });
+                grid.appendChild(cell);
+
+                // Input pattern visualization grid
+                const vizCell = document.createElement('div');
+                vizCell.classList.add('prediction-cell');
+                inputPatternViz.appendChild(vizCell);
+            }
+        }
+
+        // Update input pattern visualization
+        function updateInputPatternVisualization() {
+            const cells = document.querySelectorAll('.grid-cell');
+            const vizCells = document.querySelectorAll('.prediction-cell');
+            
+            cells.forEach((cell, index) => {
+                vizCells[index].classList.toggle('filled', cell.classList.contains('active'));
+            });
+        }
+
+        // Collect pattern from grid
+        function collectPattern() {
+            const cells = document.querySelectorAll('.grid-cell');
+            return Array.from(cells).map(cell => 
+                cell.classList.contains('active') ? 1 : 0
+            );
+        }
+
+        // Reset grid
+        function resetGrid() {
+            const cells = document.querySelectorAll('.grid-cell');
+            cells.forEach(cell => cell.classList.remove('active'));
+            updateInputPatternVisualization();
+            document.getElementById('letterInput').value = '';
+            document.getElementById('predictionResult').textContent = '';
+        }
+
+        // Visualize trained patterns
+        function visualizeTrainedPatterns(database) {
+            trainedPatternViz.innerHTML = '';
+            
+            for (const [letter, patterns] of Object.entries(database)) {
+                patterns.forEach((pattern, index) => {
+                    const patternContainer = document.createElement('div');
+                    patternContainer.classList.add('flex', 'items-center', 'space-x-2');
+                    
+                    const patternGrid = document.createElement('div');
+                    patternGrid.classList.add('prediction-grid');
+                    
+                    pattern.forEach(value => {
+                        const cell = document.createElement('div');
+                        cell.classList.add('prediction-cell');
+                        if (value === 1) cell.classList.add('filled');
+                        patternGrid.appendChild(cell);
+                    });
+                    
+                    const letterLabel = document.createElement('span');
+                    letterLabel.textContent = `${letter} (Pola ${index + 1})`;
+                    
+                    patternContainer.appendChild(patternGrid);
+                    patternContainer.appendChild(letterLabel);
+                    
+                    trainedPatternViz.appendChild(patternContainer);
+                });
+            }
+        }
+
+        // Add pattern
+        function addPattern() {
+            const letter = document.getElementById('letterInput').value;
+            const pattern = collectPattern();
+
+            if (!letter) {
+                alert('Masukkan huruf terlebih dahulu');
+                return;
+            }
+
+            fetch('/add_pattern', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ letter, pattern })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    alert(data.error);
+                } else {
+                    alert(data.message);
+                    loadDatabase();
+                    resetGrid();
+                }
+            });
+        }
+
+        // Train model
+        function trainModel() {
+            fetch('/train', { method: 'POST' })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    alert(data.error);
+                } else {
+                    document.getElementById('trainingLog').textContent = 
+                        JSON.stringify(data.training_log, null, 2);
+                }
+            });
+        }
+
+        // Predict
+        function predict() {
+            const pattern = collectPattern();
+
+            fetch('/predict', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ pattern })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    alert(data.error);
+                } else {
+                    document.getElementById('predictionResult').textContent = 
+                        data.prediction;
+                }
+            });
+        }
+
+        // Load database
+        function loadDatabase() {
+            fetch('/get_database')
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('letterDatabase').textContent = 
+                    JSON.stringify(data, null, 2);
+                
+                // Visualize trained patterns
+                visualizeTrainedPatterns(data);
+            });
+        }
+
+        // Initialize on page load
+        initializeGrids();
+        loadDatabase();
+
+
+        // Fungsi untuk menghapus pola huruf
+            function deletePattern(letter, index) {
+                fetch('/delete_pattern', {
+                    method: 'POST',
+                    headers: {
+                    'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ letter, pattern_index: index })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    alert(data.error);
+                } else {
+                    alert(data.message);
+                    loadDatabase();
+                }
+            });
+        }
+
+        // Visualize trained patterns (diperbarui untuk mendukung hapus pola)
+        function visualizeTrainedPatterns(database) {
+            trainedPatternViz.innerHTML = '';
+            
+            for (const [letter, patterns] of Object.entries(database)) {
+                patterns.forEach((pattern, index) => {
+                    const patternContainer = document.createElement('div');
+                    patternContainer.classList.add(
+                        'flex', 'items-center', 'space-x-2', 
+                        'trained-pattern-container', 'relative', 'group'
+                    );
+                    
+                    const patternGrid = document.createElement('div');
+                    patternGrid.classList.add('prediction-grid');
+                    
+                    pattern.forEach(value => {
+                        const cell = document.createElement('div');
+                        cell.classList.add('prediction-cell');
+                        if (value === 1) cell.classList.add('filled');
+                        patternGrid.appendChild(cell);
+                    });
+                    
+                    const letterLabel = document.createElement('span');
+                    letterLabel.textContent = `${letter} (Pola ${index + 1})`;
+                    
+                    // Tombol hapus pola
+                    const deleteBtn = document.createElement('button');
+                    deleteBtn.innerHTML = '🗑️';
+                    deleteBtn.classList.add(
+                        'delete-pattern-btn', 
+                        'absolute', '-top-2', '-right-2', 
+                        'bg-red-500', 'text-white', 
+                        'rounded-full', 'w-6', 'h-6', 
+                        'flex', 'items-center', 'justify-center',
+                        'text-xs'
+                    );
+                    deleteBtn.onclick = () => deletePattern(letter, index);
+                    
+                    patternContainer.appendChild(patternGrid);
+                    patternContainer.appendChild(letterLabel);
+                    patternContainer.appendChild(deleteBtn);
+                    
+                    trainedPatternViz.appendChild(patternContainer);
+                });
+            }
+        }
+
+        // Fungsi konfirmasi hapus database
+        function clearDatabaseConfirmation() {
+            document.getElementById('confirmationModal').classList.remove('hidden');
+            document.getElementById('confirmationModal').classList.add('flex');
+        }
+
+        // Fungsi tutup modal konfirmasi
+        function closeConfirmationModal() {
+            document.getElementById('confirmationModal').classList.remove('flex');
+            document.getElementById('confirmationModal').classList.add('hidden');
+        }
+
+        // Fungsi hapus seluruh database
+        function clearDatabase() {
+            fetch('/clear_database', { method: 'POST' })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    alert(data.error);
+                } else {
+                    alert(data.message);
+                    loadDatabase();
+                    closeConfirmationModal();
+                }
+            });
+        }
+    </script>
+</body>
+</html>
